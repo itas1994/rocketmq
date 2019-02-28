@@ -17,15 +17,19 @@
 
 package org.apache.rocketmq.broker;
 
-import java.io.File;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.rocketmq.common.BrokerConfig;
+import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.remoting.netty.NettyClientConfig;
 import org.apache.rocketmq.remoting.netty.NettyServerConfig;
+import org.apache.rocketmq.remoting.protocol.RemotingCommand;
+import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import java.io.File;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,5 +50,29 @@ public class BrokerControllerTest {
     @After
     public void destroy() {
         UtilAll.deleteFile(new File(new MessageStoreConfig().getStorePathRootDir()));
+    }
+
+    public static void main(String[] args) throws Exception {
+        //设置版本号
+        System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
+        //构建nameserver配置
+        final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+        nettyServerConfig.setListenPort(10911);
+        //构建broker配置
+        final BrokerConfig brokerConfig = new BrokerConfig();
+        brokerConfig.setBrokerName("broker-a");
+        brokerConfig.setNamesrvAddr("127.0.0.1:9876");
+        //构建messagestore配置
+        final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
+        messageStoreConfig.setDeleteWhen("04");
+        messageStoreConfig.setFileReservedTime(48);
+        messageStoreConfig.setFlushDiskType(FlushDiskType.ASYNC_FLUSH);
+        messageStoreConfig.setDuplicationEnable(false);
+        //构建brokerController
+        BrokerController brokerController = new BrokerController(brokerConfig, nettyServerConfig, new NettyClientConfig(), messageStoreConfig);
+        brokerController.initialize();
+        brokerController.start();
+
+        Thread.sleep(DateUtils.MILLIS_PER_DAY);
     }
 }
